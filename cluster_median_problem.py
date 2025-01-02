@@ -13,25 +13,15 @@ def read_data():
     return data 
 
 
-# Generate synthetic data
-def generate_data(n_points=20, n_features=2):
-    np.random.seed(42)
-    return np.random.rand(n_points, n_features)
-
 # Compute distance matrix
 def compute_distance_matrix(A):
     return squareform(pdist(A))
 
-# A = generate_data()
+
 A= read_data()
 D = compute_distance_matrix(A)
 m, n = A.shape
 
-# print("Data matrix A:")
-# print(A)
-# print("Distance matrix D:")
-# print(D)
-# print("Shape of A:", A.shape)
 
 def create_ampl_files(A, D, k, model_filename="cluster_median.mod", data_filename="cluster_median.dat"):
     # Create .mod file for AMPL
