@@ -1,6 +1,7 @@
 import numpy as np
 from scipy.spatial.distance import pdist, squareform
 import networkx as nx
+import math
 
 # Read data from file crop_yield_data.csv
 def read_data():
@@ -117,3 +118,54 @@ def solve_mst_heuristic(D, k):
 
 heuristic_clusters = solve_mst_heuristic(D, k=3)
 print("Heuristic Clusters:", heuristic_clusters)
+
+
+def compute_cluster_median_cost(D, clusters):
+    """
+    Given a distance matrix D and a partition of the nodes into clusters,
+    compute:
+      1) The sum of distances of all nodes to their cluster 'median'.
+      2) Which node is chosen as the median for each cluster.
+
+    The 'median' of a cluster C is the node j in C that minimizes
+    sum(D[i, j] for i in C).
+    
+    Parameters
+    ----------
+    D : 2D array-like (e.g., NumPy array)
+        Distance (or cost) matrix of shape (n, n).
+    clusters : list of lists
+        A list of clusters, each being a list of node indices.
+
+    Returns
+    -------
+    total_cost : float
+        The sum of distances from each node to its cluster's chosen median.
+    medians : list
+        A list of length len(clusters), where medians[c] is the median node
+        in clusters[c].
+    """
+    total_cost = 0
+    medians = []
+    
+    for cluster in clusters:
+        best_cluster_cost = math.inf
+        best_median = None
+        
+        # Try each node in 'cluster' as the possible median
+        for candidate in cluster:
+            cost = sum(D[i, candidate] for i in cluster)
+            if cost < best_cluster_cost:
+                best_cluster_cost = cost
+                best_median = candidate
+        
+        total_cost += best_cluster_cost
+        medians.append(best_median)
+    
+    return total_cost, medians
+
+
+obj_value, cluster_medians = compute_cluster_median_cost(D, heuristic_clusters)
+
+print("Medians:", cluster_medians)
+print("Objective Function (Cluster-Median Cost):", obj_value)
