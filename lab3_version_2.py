@@ -95,14 +95,11 @@ def solve_mst_heuristic(D, k):
     for i in range(n):
         for j in range(i + 1, n):
             w = D[i, j]
-            # If w==0 could be a special meaning (no edge or zero distance).
-            # Often we skip zero edges unless we truly want them.
             if w > 0:
                 G.add_edge(i, j, weight=w)
     
     # 2) Compute MST of this graph
     T = nx.minimum_spanning_tree(G, weight='weight', algorithm='kruskal')
-    # T now has n-1 edges if the graph is connected
     
     # 3) Sort MST edges by descending weight
     mst_edges = sorted(T.edges(data=True), key=lambda x: x[2]['weight'], reverse=True)
