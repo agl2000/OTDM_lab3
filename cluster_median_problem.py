@@ -2,6 +2,8 @@ import numpy as np
 from scipy.spatial.distance import pdist, squareform
 import networkx as nx
 import math
+import matplotlib.pyplot as plt
+from sklearn.manifold import TSNE
 
 # Read data from file crop_yield_data.csv
 def read_data():
@@ -159,3 +161,170 @@ obj_value, cluster_medians = compute_cluster_median_cost(D, heuristic_clusters)
 
 print("Medians:", cluster_medians)
 print("Objective Function (Cluster-Median Cost):", obj_value)
+
+
+def parse_cluster_assignments(assignments_text):
+    """
+    Parse the provided cluster assignments from text format into a usable structure.
+    
+    Parameters
+    ----------
+    assignments_text : str
+        Text containing cluster assignments in the format "Point X assigned to Cluster Y".
+    
+    Returns
+    -------
+    clusters : list of lists
+        A list of clusters, where each cluster is a list of point indices.
+    cluster_names : list
+        List of cluster names corresponding to each cluster.
+    """
+    # Parse the assignments
+    lines = assignments_text.strip().split("\n")
+    point_to_cluster = {}
+    for line in lines:
+        point, cluster = map(int, line.replace("Point", "").replace("assigned to Cluster", "").split())
+        point_to_cluster[point - 1] = cluster  # Convert to 0-based indexing
+    
+    # Group points by their cluster IDs
+    cluster_dict = {}
+    for point, cluster in point_to_cluster.items():
+        cluster_dict.setdefault(cluster, []).append(point)
+    
+    clusters = list(cluster_dict.values())
+    cluster_names = list(cluster_dict.keys())
+    
+    return clusters, cluster_names
+
+# Provided clustering results as text
+provided_clustering_text = """
+Point 1 assigned to Cluster 22
+Point 2 assigned to Cluster 18
+Point 3 assigned to Cluster 22
+Point 4 assigned to Cluster 22
+Point 5 assigned to Cluster 18
+Point 6 assigned to Cluster 18
+Point 7 assigned to Cluster 32
+Point 8 assigned to Cluster 22
+Point 9 assigned to Cluster 18
+Point 10 assigned to Cluster 32
+Point 11 assigned to Cluster 32
+Point 12 assigned to Cluster 22
+Point 13 assigned to Cluster 32
+Point 14 assigned to Cluster 22
+Point 15 assigned to Cluster 32
+Point 16 assigned to Cluster 22
+Point 17 assigned to Cluster 18
+Point 18 assigned to Cluster 18
+Point 19 assigned to Cluster 32
+Point 20 assigned to Cluster 18
+Point 21 assigned to Cluster 32
+Point 22 assigned to Cluster 22
+Point 23 assigned to Cluster 22
+Point 24 assigned to Cluster 22
+Point 25 assigned to Cluster 22
+Point 26 assigned to Cluster 18
+Point 27 assigned to Cluster 22
+Point 28 assigned to Cluster 22
+Point 29 assigned to Cluster 18
+Point 30 assigned to Cluster 22
+Point 31 assigned to Cluster 18
+Point 32 assigned to Cluster 32
+Point 33 assigned to Cluster 22
+Point 34 assigned to Cluster 22
+Point 35 assigned to Cluster 18
+Point 36 assigned to Cluster 22
+Point 37 assigned to Cluster 22
+Point 38 assigned to Cluster 22
+Point 39 assigned to Cluster 18
+Point 40 assigned to Cluster 22
+Point 41 assigned to Cluster 32
+Point 42 assigned to Cluster 32
+Point 43 assigned to Cluster 32
+Point 44 assigned to Cluster 32
+Point 45 assigned to Cluster 18
+Point 46 assigned to Cluster 18
+Point 47 assigned to Cluster 32
+Point 48 assigned to Cluster 18
+Point 49 assigned to Cluster 32
+Point 50 assigned to Cluster 32
+"""
+
+# Parse the provided clustering
+provided_clusters, provided_cluster_names = parse_cluster_assignments(provided_clustering_text)
+
+# Add 1 to heuristic cluster medians for proper labeling
+adjusted_heuristic_cluster_medians = [median + 1 for median in cluster_medians]
+
+def visualize_clusters_side_by_side(data, clusters1, cluster_names1, clusters2, cluster_names2):
+    """
+    Visualize two clustering results side by side using t-SNE and scatter plots.
+
+    Parameters
+    ----------
+    data : array-like of shape (n_samples, n_features)
+        Original high-dimensional data.
+    clusters1 : list of lists
+        A list of clusters for the first method, where each cluster is a list of indices.
+    cluster_names1 : list
+        List of cluster names or labels corresponding to clusters1.
+    clusters2 : list of lists
+        A list of clusters for the second method, where each cluster is a list of indices.
+    cluster_names2 : list
+        List of cluster names or labels corresponding to clusters2.
+    """
+    # Assign cluster labels for each method
+    cluster_labels1 = np.zeros(len(data), dtype=int)
+    for cluster_id, cluster in enumerate(clusters1):
+        for idx in cluster:
+            cluster_labels1[idx] = cluster_id
+    
+    cluster_labels2 = np.zeros(len(data), dtype=int)
+    for cluster_id, cluster in enumerate(clusters2):
+        for idx in cluster:
+            cluster_labels2[idx] = cluster_id
+    
+    # Reduce dimensions to 2D using t-SNE
+    tsne = TSNE(n_components=2, random_state=42)
+    reduced_data = tsne.fit_transform(data)
+    
+    # Create side-by-side scatter plots
+    fig, axes = plt.subplots(1, 2, figsize=(16, 8), sharex=True, sharey=True)
+
+    # Plot the first clustering result
+    for cluster_id in range(len(clusters1)):
+        cluster_points = reduced_data[cluster_labels1 == cluster_id]
+        axes[0].scatter(
+            cluster_points[:, 0],
+            cluster_points[:, 1],
+            label=f"Cluster {cluster_names1[cluster_id]}"
+        )
+    axes[0].set_title("t-SNE visualization of MST heuristic clusters")
+    axes[0].set_xlabel("t-SNE dimension 1")
+    axes[0].set_ylabel("t-SNE dimension 2")
+    axes[0].legend()
+
+    # Plot the second clustering result
+    for cluster_id in range(len(clusters2)):
+        cluster_points = reduced_data[cluster_labels2 == cluster_id]
+        axes[1].scatter(
+            cluster_points[:, 0],
+            cluster_points[:, 1],
+            label=f"Cluster {cluster_names2[cluster_id]}"
+        )
+    axes[1].set_title("t-SNE visualisation of AMPL clusters")
+    axes[1].set_xlabel("t-SNE dimension 1")
+    axes[1].legend()
+
+    plt.tight_layout()
+    plt.show()
+
+# Visualize both clustering results side by side
+visualize_clusters_side_by_side(
+    A, 
+    heuristic_clusters, 
+    adjusted_heuristic_cluster_medians, 
+    provided_clusters, 
+    provided_cluster_names
+)
+
